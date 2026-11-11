@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { NoticeItem } from '../types';
@@ -60,12 +60,17 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
     try {
       setSubmitting(true);
-      await updateDoc(doc(db, 'notices', notice.id), {
-        title: formTitle.trim(),
-        content: formContent.trim(),
-        date: formDate,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(
+        doc(db, 'notices', notice.id),
+        {
+          id: notice.id,
+          title: formTitle.trim(),
+          content: formContent.trim(),
+          date: formDate,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       setIsEditModalOpen(false);
     } catch (err) {
       alert('공지 수정 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));

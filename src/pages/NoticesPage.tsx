@@ -63,7 +63,7 @@ export const NoticesPage: React.FC = () => {
         createdAt: now,
       };
 
-      await setDoc(doc(db, 'notices', newId), newNotice);
+      await setDoc(doc(db, 'notices', newId), newNotice, { merge: true });
       setIsModalOpen(false);
       navigate(`/notices/${newId}`);
     } catch (err) {

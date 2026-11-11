@@ -76,7 +76,7 @@ export const StoriesPage: React.FC = () => {
         createdAt: now,
       };
 
-      await setDoc(ref, newStory);
+      await setDoc(ref, newStory, { merge: true });
       setIsModalOpen(false);
       navigate(`/stories/${newId}`);
     } catch (err) {

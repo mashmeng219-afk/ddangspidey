@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { VideoItem } from '../types';
@@ -85,13 +85,17 @@ export const VideosPage: React.FC = () => {
       const now = new Date().toISOString();
       if (editingVideo) {
         const ref = doc(db, 'videos', editingVideo.id);
-        await updateDoc(ref, {
+        const updatedVideo: Partial<VideoItem> = {
+          id: editingVideo.id,
           title: formTitle.trim(),
           description: formDescription.trim(),
           youtubeUrl: formYoutubeUrl.trim(),
           youtubeId: ytId,
+          order: editingVideo.order || 1,
+          createdAt: editingVideo.createdAt || now,
           updatedAt: now,
-        });
+        };
+        await setDoc(ref, updatedVideo, { merge: true });
       } else {
         const newId = `vid-${Date.now()}`;
         const ref = doc(db, 'videos', newId);
@@ -103,8 +107,9 @@ export const VideosPage: React.FC = () => {
           youtubeId: ytId,
           order: videos.length + 1,
           createdAt: now,
+          updatedAt: now,
         };
-        await setDoc(ref, newVideo);
+        await setDoc(ref, newVideo, { merge: true });
       }
       setIsModalOpen(false);
     } catch (err) {

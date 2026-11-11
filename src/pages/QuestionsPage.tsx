@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { QuestionItem } from '../types';
@@ -99,7 +99,7 @@ export const QuestionsPage: React.FC = () => {
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(ref, newQ);
+      await setDoc(ref, newQ, { merge: true });
       localStorage.setItem(COOLDOWN_KEY, Date.now().toString());
       setCooldownRemaining(COOLDOWN_SECONDS);
       setInputQuestion('');
@@ -125,11 +125,17 @@ export const QuestionsPage: React.FC = () => {
     try {
       setSavingAnswer(true);
       const ref = doc(db, 'questions', answeringQuestion.id);
-      await updateDoc(ref, {
-        answer: answerText.trim(),
-        answered: true,
-        answeredAt: new Date().toISOString(),
-      });
+      await setDoc(
+        ref,
+        {
+          id: answeringQuestion.id,
+          question: answeringQuestion.question,
+          answer: answerText.trim(),
+          answered: true,
+          answeredAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       setIsAnswerModalOpen(false);
     } catch (err) {
       alert('답변 저장 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));

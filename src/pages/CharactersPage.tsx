@@ -104,7 +104,7 @@ export const CharactersPage: React.FC = () => {
         createdAt: now,
       };
 
-      await setDoc(ref, newChar);
+      await setDoc(ref, newChar, { merge: true });
       setIsModalOpen(false);
       navigate(`/characters/${newId}`);
     } catch (err) {

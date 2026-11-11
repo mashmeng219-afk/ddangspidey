@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   doc,
   onSnapshot,
-  updateDoc,
+  setDoc,
   deleteDoc,
   collection,
 } from 'firebase/firestore';
@@ -304,10 +304,15 @@ export const CharacterDetailPage: React.FC<CharacterDetailPageProps> = ({ charac
     try {
       setSubmitting(true);
       const ref = doc(db, 'characters', character.id);
-      await updateDoc(ref, {
-        ...data,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(
+        ref,
+        {
+          ...character,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       setActiveModalSection(null);
     } catch (err) {
       alert('저장 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
@@ -357,14 +362,19 @@ export const CharacterDetailPage: React.FC<CharacterDetailPageProps> = ({ charac
 
     try {
       setSubmitting(true);
-      // 1. Update current character
+      // 1. Update current character using setDoc with merge: true
       const ref = doc(db, 'characters', character.id);
-      await updateDoc(ref, {
-        relationships: formRelationships,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(
+        ref,
+        {
+          ...character,
+          relationships: formRelationships,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
 
-      // 2. Synchronize bi-directionally to target characters
+      // 2. Synchronize bi-directionally to target characters using setDoc with merge: true
       for (const rel of formRelationships) {
         const target = allCharacters.find((c) => c.id === rel.targetCharacterId);
         if (target) {
@@ -383,10 +393,15 @@ export const CharacterDetailPage: React.FC<CharacterDetailPageProps> = ({ charac
           }
 
           try {
-            await updateDoc(doc(db, 'characters', target.id), {
-              relationships: targetRels,
-              updatedAt: new Date().toISOString(),
-            });
+            await setDoc(
+              doc(db, 'characters', target.id),
+              {
+                ...target,
+                relationships: targetRels,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
           } catch {
             // best-effort sync
           }

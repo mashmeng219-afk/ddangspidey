@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { doc, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { StoryItem } from '../types';
@@ -71,12 +71,19 @@ export const StoryDetailPage: React.FC<StoryDetailPageProps> = ({ storyId }) => 
     try {
       setSubmitting(true);
       const ref = doc(db, 'stories', story.id);
-      await updateDoc(ref, {
-        title: formTitle.trim(),
-        content: formContent.trim(),
-        spineColor: formColor,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(
+        ref,
+        {
+          id: story.id,
+          title: formTitle.trim(),
+          content: formContent.trim(),
+          spineColor: formColor,
+          order: story.order || 1,
+          createdAt: story.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       setIsEditModalOpen(false);
     } catch (err) {
       alert('수정 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
