@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { SongItem, CharacterItem } from '../types';
 import { INITIAL_SONGS, INITIAL_CHARACTERS } from '../data/seedData';
-import { StorageUploader } from '../components/StorageUploader';
+import { AudioSourceInput } from '../components/AudioSourceInput';
 import { Modal } from '../components/Modal';
 import { BoomboxRadio } from '../components/BoomboxRadio';
 import { CassetteTape } from '../components/CassetteTape';
@@ -205,7 +205,7 @@ export const SongsPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAudioUrl.trim()) {
-      alert('오디오 파일(mp3) 또는 오디오 URL을 입력해주세요.');
+      alert('오디오 파일(mp3)을 업로드하거나 오디오 URL을 입력해주세요.');
       return;
     }
 
@@ -216,15 +216,27 @@ export const SongsPage: React.FC = () => {
 
       if (editingSong) {
         const ref = doc(db, 'songs', editingSong.id);
-        await updateDoc(ref, {
+        // Using setDoc with { merge: true } instead of updateDoc
+        // so that if the document does not exist yet in Firestore, it is automatically created!
+        const updatedSong: SongItem = {
+          id: editingSong.id,
           title: formTitle.trim(),
           audioUrl: formAudioUrl.trim(),
           lyrics: formLyrics.trim(),
           relatedCharacterIds,
+          order: editingSong.order || 1,
+          createdAt: editingSong.createdAt || now,
           updatedAt: now,
-        });
+        };
+        await setDoc(ref, updatedSong, { merge: true });
         if (currentSong?.id === editingSong.id) {
-          setCurrentSong((prev) => (prev ? { ...prev, title: formTitle.trim(), lyrics: formLyrics.trim() } : null));
+          setCurrentSong((prev) => (prev ? {
+            ...prev,
+            title: formTitle.trim(),
+            audioUrl: formAudioUrl.trim(),
+            lyrics: formLyrics.trim(),
+            relatedCharacterIds,
+          } : null));
         }
       } else {
         const newId = `song-${Date.now()}`;
@@ -237,8 +249,9 @@ export const SongsPage: React.FC = () => {
           relatedCharacterIds,
           order: songs.length + 1,
           createdAt: now,
+          updatedAt: now,
         };
-        await setDoc(ref, newSong);
+        await setDoc(ref, newSong, { merge: true });
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -451,13 +464,10 @@ export const SongsPage: React.FC = () => {
             />
           </div>
 
-          <StorageUploader
-            label="MP3 오디오 파일 / URL *"
+          <AudioSourceInput
             value={formAudioUrl}
             onChange={setFormAudioUrl}
-            accept="audio/*"
-            folder="songs"
-            placeholder="https://... 또는 .mp3 파일 업로드"
+            disabled={submitting}
           />
 
           <div>
