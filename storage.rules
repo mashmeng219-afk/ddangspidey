@@ -1,0 +1,21 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isWhitelistedOwner() {
+      return isSignedIn() &&
+        request.auth.token.email == 'choehyejeong219@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    // All uploaded assets (images, audio, videos)
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if isWhitelistedOwner();
+    }
+  }
+}

@@ -1,0 +1,176 @@
+{
+  "entities": {
+    "HomeCard": {
+      "title": "HomeCard",
+      "description": "Featured cards for the home slider (intro, notice, news)",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["intro", "notice", "news"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "image": { "type": "string", "maxLength": 1000 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "link": { "type": "string", "maxLength": 1000 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "image", "text"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Archive announcements and updates",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content"]
+    },
+    "Talk": {
+      "title": "Talk",
+      "description": "Creative concepts, sketches, and casual thoughts",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "images": { "type": "array" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content"]
+    },
+    "Video": {
+      "title": "Video",
+      "description": "Video archive item containing embedded YouTube information",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 500 },
+        "youtubeUrl": { "type": "string", "maxLength": 500 },
+        "youtubeId": { "type": "string", "maxLength": 50 },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "youtubeUrl", "youtubeId"]
+    },
+    "Song": {
+      "title": "Song",
+      "description": "Audio song archive item with lyrics and character connections",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "audioUrl": { "type": "string", "maxLength": 1000 },
+        "lyrics": { "type": "string", "maxLength": 10000 },
+        "relatedCharacterIds": { "type": "array" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "audioUrl"]
+    },
+    "Character": {
+      "title": "Character",
+      "description": "Character archive profile with gallery, basic info, prompts, relationships, and related works",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "keywordTags": { "type": "array" },
+        "coverUrl": { "type": "string", "maxLength": 1000 },
+        "mainImageUrl": { "type": "string", "maxLength": 1000 },
+        "intro": { "type": "string", "maxLength": 5000 },
+        "basicInfo": { "type": "array" },
+        "appearancePrompts": { "type": "array" },
+        "relationships": { "type": "array" },
+        "gallery": { "type": "array" },
+        "relatedWorks": { "type": "array" },
+        "relatedSongIds": { "type": "array" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "coverUrl"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "Behind story or short literature displayed on the editorial bookshelf",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "spineColor": { "type": "string", "maxLength": 50 },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Anonymous question and owner reply pair",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string", "maxLength": 50 },
+        "answer": { "type": "string", "maxLength": 1000 },
+        "answered": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "answeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answered"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Whitelisted administrator profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 200 },
+        "role": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/homeCards/{cardId}": {
+      "schema": { "$ref": "#/entities/HomeCard" },
+      "description": "Home featured slider cards"
+    },
+    "/heroCards/{cardId}": {
+      "schema": { "$ref": "#/entities/HomeCard" },
+      "description": "Hero section 5 staggered cards"
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/Notice" },
+      "description": "Archive notices collection"
+    },
+    "/talks/{talkId}": {
+      "schema": { "$ref": "#/entities/Talk" },
+      "description": "Thoughts and casual talk collection"
+    },
+    "/videos/{videoId}": {
+      "schema": { "$ref": "#/entities/Video" },
+      "description": "Video archive collection"
+    },
+    "/songs/{songId}": {
+      "schema": { "$ref": "#/entities/Song" },
+      "description": "Songs collection with audio and lyrics"
+    },
+    "/characters/{characterId}": {
+      "schema": { "$ref": "#/entities/Character" },
+      "description": "Characters profile and gallery collection"
+    },
+    "/stories/{storyId}": {
+      "schema": { "$ref": "#/entities/Story" },
+      "description": "Editorial library books and short stories"
+    },
+    "/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/Question" },
+      "description": "Anonymous questions and answered threads"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Whitelisted administrators"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Personal Archive",
+  "description": "개인 아카이브 웹사이트 - 영상, 노래, 캐릭터, 비하인드 스토리, 익명 질문함",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

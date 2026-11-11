@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'HSSanTokki20';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2405@1.0/HSSanTokki20-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SebangGothic';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2104@1.0/SEBANG_Gothic_Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SebangGothic';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2104@1.0/SEBANG_Gothic_Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --color-ink: #0B1F4B;
+    --color-royal: #1D3FBB;
+    --color-cobalt: #2F5BEA;
+    --color-sky: #6FA8FF;
+    --color-ice: #DCE9FF;
+    --color-bg-paper: #F6EFE3;
+    --color-bg-cream: #FAF6EF;
+  }
+
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+    background-color: #F6EFE3;
+    color: #0B1F4B;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(29, 63, 187, 0.02) 0%, transparent 60%),
+      repeating-linear-gradient(45deg, rgba(11, 31, 75, 0.006) 0px, rgba(11, 31, 75, 0.006) 1px, transparent 1px, transparent 12px);
+  }
+}
+
+.font-sebang {
+  font-family: 'SebangGothic', 'Pretendard', sans-serif;
+}
+
+.font-santokki {
+  font-family: 'HSSanTokki20', 'Pretendard', sans-serif;
+}
+
+.font-editorial {
+  font-family: 'Quaaykop', 'Cormorant Garamond', 'Cinzel', serif;
+}
+
+.font-num {
+  font-family: 'Quaaykop', 'Cormorant Garamond', 'Cinzel', 'Pretendard', serif;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Vertical text for book spine in stories */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Paper aesthetic utilities */
+.paper-cream {
+  background-color: #F6EFE3;
+  color: #0B1F4B;
+}
+
+.paper-sheet {
+  background-color: #FAF6EF;
+  border: 1px solid rgba(11, 31, 75, 0.12);
+  box-shadow: 
+    0 1px 3px rgba(11, 31, 75, 0.05),
+    0 8px 20px -6px rgba(11, 31, 75, 0.08);
+}
+
+.paper-fold-line {
+  position: relative;
+}
+.paper-fold-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(11, 31, 75, 0.1) 20%, rgba(11, 31, 75, 0.1) 80%, transparent);
+}
+
+.paper-blue-peek {
+  position: relative;
+}
+.paper-blue-peek::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  background: #1D3FBB;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  opacity: 0.85;
+}
+
+/* 3D Perspective scroll effects */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.paper-3d-card {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  transform: translateZ(0);
+}
+
+.paper-3d-card:hover {
+  transform: translateY(-4px) rotateX(2deg) rotateY(-1deg);
+  box-shadow: 
+    0 4px 6px -1px rgba(11, 31, 75, 0.08),
+    0 16px 28px -6px rgba(11, 31, 75, 0.14);
+}
+
+/* Underwater caustics and slow water animations */
+@keyframes underwater-drift {
+  0% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-18px) rotate(2deg) scale(1.03);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes caustics-pulse {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    opacity: 0.32;
+    transform: scale(1.05) translateY(-8px);
+  }
+}
+
+/* Cassette reels rotating animation */
+@keyframes cassette-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Boombox speaker vibration pulse */
+@keyframes speaker-vibration {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+.animate-underwater-float {
+  animation: underwater-drift 24s ease-in-out infinite;
+}
+
+.animate-caustics {
+  animation: caustics-pulse 20s ease-in-out infinite alternate;
+}
+
+.animate-cassette-spin {
+  animation: cassette-spin 2.4s linear infinite;
+}
+
+.animate-speaker-vibe {
+  animation: speaker-vibration 0.5s ease-in-out infinite alternate;
+}
+
+/* Bubble slow floating animations */
+@keyframes bubble-float-1 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes bubble-float-2 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float-left {
+  animation: bubble-float-1 5s ease-in-out infinite;
+}
+
+.animate-float-right {
+  animation: bubble-float-2 5.6s ease-in-out 0.8s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-underwater-float,
+  .animate-caustics,
+  .animate-cassette-spin,
+  .animate-speaker-vibe,
+  .animate-float-left,
+  .animate-float-right,
+  .paper-3d-card {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
