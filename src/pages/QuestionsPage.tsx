@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { QuestionItem } from '../types';
-import { INITIAL_QUESTIONS } from '../data/seedData';
 import { Modal } from '../components/Modal';
 import { PaperSpeechBubble } from '../components/TornPaper';
 import { MoonPhaseStrip } from '../components/MoonMotifs';
-import { MessageSquare, Send, CheckCircle2, Clock, Trash2, Edit3, ShieldAlert } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, Clock, Trash2, Edit3, ShieldAlert, AlertCircle, RotateCcw } from 'lucide-react';
 
 const COOLDOWN_KEY = 'archive_question_cooldown';
 const COOLDOWN_SECONDS = 45;
@@ -16,6 +15,7 @@ export const QuestionsPage: React.FC = () => {
   const { isOwner } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form states for visitors
   const [inputQuestion, setInputQuestion] = useState('');
@@ -28,6 +28,7 @@ export const QuestionsPage: React.FC = () => {
   const [answerText, setAnswerText] = useState('');
   const [isAnswerModalOpen, setIsAnswerModalOpen] = useState(false);
   const [savingAnswer, setSavingAnswer] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   // Cooldown timer effect
   useEffect(() => {
@@ -63,7 +64,8 @@ export const QuestionsPage: React.FC = () => {
           list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setQuestions(list);
         } else {
-          setQuestions(INITIAL_QUESTIONS);
+          // No dummy/seed data fallback! Pure empty array
+          setQuestions([]);
         }
         setLoading(false);
       },
@@ -90,6 +92,7 @@ export const QuestionsPage: React.FC = () => {
 
     try {
       setSubmitting(true);
+      setErrorMsg(null);
       const newId = `q-${Date.now()}`;
       const ref = doc(db, 'questions', newId);
       const newQ: QuestionItem = {
@@ -106,7 +109,8 @@ export const QuestionsPage: React.FC = () => {
       setSubmittedSuccess(true);
       setTimeout(() => setSubmittedSuccess(false), 4000);
     } catch (err) {
-      alert('질문 등록 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg('질문 등록 중 오류가 발생했습니다: ' + msg);
     } finally {
       setSubmitting(false);
     }
@@ -124,6 +128,7 @@ export const QuestionsPage: React.FC = () => {
 
     try {
       setSavingAnswer(true);
+      setErrorMsg(null);
       const ref = doc(db, 'questions', answeringQuestion.id);
       await setDoc(
         ref,
@@ -138,29 +143,78 @@ export const QuestionsPage: React.FC = () => {
       );
       setIsAnswerModalOpen(false);
     } catch (err) {
-      alert('답변 저장 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg('답변 저장 중 오류가 발생했습니다: ' + msg);
     } finally {
       setSavingAnswer(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 질문을 삭제하시겠습니까?')) return;
+  // 1) 질문 전체 영구 삭제 (Owner only)
+  const handleDeleteQuestion = async (id: string) => {
+    if (!confirm('삭제할까요?')) return;
     try {
+      setErrorMsg(null);
       await deleteDoc(doc(db, 'questions', id));
     } catch (err) {
-      alert('삭제 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg('질문 삭제 중 오류가 발생했습니다: ' + msg);
+      console.error('Delete question failed:', err);
     }
   };
 
-  // Split into answered vs unanswered (unanswered is only visible to owner)
+  // 2) 답변만 삭제 (질문은 유지되어 미답변 상태로 복귀) (Owner only)
+  const handleDeleteAnswer = async (q: QuestionItem) => {
+    if (!confirm('답변을 삭제할까요? (질문은 미답변 상태로 유지됩니다)')) return;
+    try {
+      setErrorMsg(null);
+      const ref = doc(db, 'questions', q.id);
+      await setDoc(
+        ref,
+        {
+          answer: '',
+          answered: false,
+          answeredAt: null,
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg('답변 삭제 중 오류가 발생했습니다: ' + msg);
+      console.error('Delete answer failed:', err);
+    }
+  };
+
+  // 3) 전체 삭제 (2단계 확인창 거친 뒤 모든 질문 삭제) (Owner only)
+  const handleDeleteAllQuestions = async () => {
+    const step1 = confirm('등록된 모든 질문을 삭제하시겠습니까?');
+    if (!step1) return;
+    const step2 = confirm('정말로 모든 질문을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
+    if (!step2) return;
+
+    try {
+      setDeletingAll(true);
+      setErrorMsg(null);
+      const snapshot = await getDocs(collection(db, 'questions'));
+      const deletePromises = snapshot.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg('전체 삭제 중 오류가 발생했습니다: ' + msg);
+      console.error('Delete all questions failed:', err);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
+  // Split into answered vs unanswered
   const answeredQuestions = questions.filter((q) => q.answered);
   const unansweredQuestions = questions.filter((q) => !q.answered);
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
       {/* Editorial Page Header: Location name only */}
-      <div className="border-b border-[rgba(11,31,75,0.12)] pb-6 mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="border-b border-[rgba(11,31,75,0.12)] pb-6 mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <span className="font-editorial text-sm tracking-widest text-[#2F5BEA] uppercase block mb-1">
             05 / Archive
@@ -172,8 +226,35 @@ export const QuestionsPage: React.FC = () => {
             로그인 없이 자유롭게 50자 이내의 질문을 남겨주세요. 주인이 확인 후 답변을 작성합니다.
           </p>
         </div>
-        <MoonPhaseStrip size={14} className="text-[#1D3FBB] opacity-60 self-start sm:self-auto" />
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {isOwner && questions.length > 0 && (
+            <button
+              onClick={handleDeleteAllQuestions}
+              disabled={deletingAll}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-300 rounded-xs transition-colors disabled:opacity-50"
+              title="등록된 모든 질문 일괄 영구 삭제"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{deletingAll ? '삭제 중...' : '전체 삭제'}</span>
+            </button>
+          )}
+          <MoonPhaseStrip size={14} className="text-[#1D3FBB] opacity-60" />
+        </div>
       </div>
+
+      {/* Error Banner */}
+      {errorMsg && (
+        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2 rounded-xs">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 leading-relaxed">{errorMsg}</div>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="text-red-500 hover:text-red-700 font-bold ml-2 text-sm"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Visitor Question Input Form (Cream Paper Sheet with Subtle Fold Line) */}
       <form
@@ -219,7 +300,7 @@ export const QuestionsPage: React.FC = () => {
             </span>
           ) : (
             <span className="text-[#0B1F4B]/45 font-light">
-              익명으로 등록되며 수정/삭제는 불가합니다.
+              익명으로 등록되며 50자 이내로 작성 가능합니다.
             </span>
           )}
 
@@ -258,7 +339,7 @@ export const QuestionsPage: React.FC = () => {
                   key={q.id}
                   className="bg-white border border-[rgba(11,31,75,0.12)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#0B1F4B]">
                       "{q.question}"
                     </p>
@@ -274,11 +355,12 @@ export const QuestionsPage: React.FC = () => {
                       답변 작성
                     </button>
                     <button
-                      onClick={() => handleDelete(q.id)}
-                      className="p-1.5 text-red-500 hover:text-red-700 transition-colors"
-                      title="삭제"
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="px-2.5 py-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 transition-colors flex items-center gap-1"
+                      title="질문 삭제"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      <span>질문 삭제</span>
                     </button>
                   </div>
                 </div>
@@ -302,9 +384,12 @@ export const QuestionsPage: React.FC = () => {
             질문 목록을 불러오는 중...
           </div>
         ) : answeredQuestions.length === 0 ? (
-          <div className="py-16 text-center border border-dashed border-[rgba(11,31,75,0.15)] p-6">
-            <MessageSquare className="w-8 h-8 mx-auto text-[#0B1F4B]/30 mb-2" />
-            <p className="text-xs text-[#0B1F4B]/60">아직 답변 완료된 질문이 없습니다.</p>
+          <div className="py-16 text-center border border-dashed border-[rgba(11,31,75,0.15)] p-8 bg-[#FAF8F5]/60">
+            <MessageSquare className="w-8 h-8 mx-auto text-[#0B1F4B]/25 mb-3" />
+            <p className="text-sm font-medium text-[#0B1F4B]/70 mb-1">아직 질문이 없어요</p>
+            <p className="text-xs text-[#0B1F4B]/45 font-light">
+              상단 입력창에서 첫 질문을 남겨보세요.
+            </p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -328,22 +413,32 @@ export const QuestionsPage: React.FC = () => {
                     </PaperSpeechBubble>
                   </div>
 
-                  {/* Owner Controls */}
+                  {/* Owner Controls: 답변 수정 / 답변 삭제 / 질문 삭제 */}
                   {isOwner && (
-                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0 pt-2">
+                    <div className="flex items-center gap-1.5 flex-shrink-0 pt-2 text-xs">
                       <button
                         onClick={() => openAnswerModal(q)}
-                        className="text-[#0B1F4B]/60 hover:text-[#1D3FBB] p-1"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[#0B1F4B]/70 hover:text-[#1D3FBB] hover:bg-[#DCE9FF]/40 rounded-xs transition-colors"
                         title="답변 수정"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">답변 수정</span>
                       </button>
                       <button
-                        onClick={() => handleDelete(q.id)}
-                        className="text-red-500/60 hover:text-red-600 p-1"
-                        title="삭제"
+                        onClick={() => handleDeleteAnswer(q)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-xs transition-colors"
+                        title="답변 내용만 삭제 (질문은 미답변으로 복귀)"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">답변 삭제</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuestion(q.id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-xs transition-colors"
+                        title="질문 전체 영구 삭제"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">질문 삭제</span>
                       </button>
                     </div>
                   )}

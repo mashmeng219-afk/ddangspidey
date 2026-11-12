@@ -9,12 +9,9 @@ import {
 } from '../types';
 import {
   INITIAL_HOME_CARDS,
-  INITIAL_NOTICES,
   INITIAL_VIDEOS,
   INITIAL_SONGS,
   INITIAL_CHARACTERS,
-  INITIAL_STORIES,
-  INITIAL_QUESTIONS,
 } from '../data/seedData';
 import { Modal } from '../components/Modal';
 import { StorageUploader } from '../components/StorageUploader';
@@ -69,8 +66,8 @@ export const HomePage: React.FC = () => {
     videos: INITIAL_VIDEOS.length,
     songs: INITIAL_SONGS.length,
     characters: INITIAL_CHARACTERS.length,
-    stories: INITIAL_STORIES.length,
-    questions: INITIAL_QUESTIONS.length,
+    stories: 0,
+    questions: 0,
   });
 
   // Slider state
@@ -139,7 +136,7 @@ export const HomePage: React.FC = () => {
           list.sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
           setNotices(list);
         } else {
-          setNotices(INITIAL_NOTICES);
+          setNotices([]);
         }
       },
       (error) => handleFirestoreError(error, OperationType.LIST, 'notices')
@@ -163,7 +160,7 @@ export const HomePage: React.FC = () => {
     );
     const unsubStories = onSnapshot(
       collection(db, 'stories'),
-      (s) => setCounts((prev) => ({ ...prev, stories: s.empty ? INITIAL_STORIES.length : s.size })),
+      (s) => setCounts((prev) => ({ ...prev, stories: s.size })),
       (err) => console.warn('Count listener stories fallback:', err)
     );
     const qQuestions = isOwner
@@ -171,7 +168,7 @@ export const HomePage: React.FC = () => {
       : query(collection(db, 'questions'), where('answered', '==', true));
     const unsubQuestions = onSnapshot(
       qQuestions,
-      (s) => setCounts((prev) => ({ ...prev, questions: s.empty ? INITIAL_QUESTIONS.length : s.size })),
+      (s) => setCounts((prev) => ({ ...prev, questions: s.size })),
       (err) => console.warn('Count listener questions fallback:', err)
     );
 

@@ -6,16 +6,19 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isWhitelistedOwner() {
-      return isSignedIn() &&
-        request.auth.token.email == 'choehyejeong219@gmail.com' &&
-        request.auth.token.email_verified == true;
+    function isOwner() {
+      return isSignedIn()
+        && (
+          request.auth.token.email == 'choehyejeong219@gmail.com' ||
+          request.auth.token.email == 'jennyjelly607@gmail.com'
+        )
+        && request.auth.token.email_verified == true;
     }
 
-    // All uploaded assets (images, audio, videos)
+    // All uploaded assets (images, audio, videos, attachments)
     match /{allPaths=**} {
       allow read: if true;
-      allow write, delete: if isWhitelistedOwner();
+      allow write, delete: if isOwner();
     }
   }
 }

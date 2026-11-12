@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType, formatKoreanError } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { NoticeItem } from '../types';
-import { INITIAL_NOTICES } from '../data/seedData';
+import { deleteAttachedStorageFiles } from '../utils/storageCleanup';
 import { Modal } from '../components/Modal';
 import { useRouter } from '../router';
-import { ArrowLeft, Edit2, Trash2, Calendar } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Calendar, AlertCircle } from 'lucide-react';
 
 interface NoticeDetailPageProps {
   noticeId: string;
@@ -18,6 +18,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
   const [notice, setNotice] = useState<NoticeItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -25,6 +26,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
   const [formContent, setFormContent] = useState('');
   const [formDate, setFormDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -33,8 +35,8 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
         if (snap.exists()) {
           setNotice({ id: snap.id, ...snap.data() } as NoticeItem);
         } else {
-          const found = INITIAL_NOTICES.find((n) => n.id === noticeId);
-          setNotice(found || null);
+          // Zero dummy/seed data fallback!
+          setNotice(null);
         }
         setLoading(false);
       },
@@ -48,6 +50,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
   const openEditModal = () => {
     if (!notice) return;
+    setErrorMsg(null);
     setFormTitle(notice.title);
     setFormContent(notice.content);
     setFormDate(notice.date || '');
@@ -60,6 +63,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
     try {
       setSubmitting(true);
+      setErrorMsg(null);
       await setDoc(
         doc(db, 'notices', notice.id),
         {
@@ -73,7 +77,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
       );
       setIsEditModalOpen(false);
     } catch (err) {
-      alert('공지 수정 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
+      setErrorMsg(formatKoreanError(err));
     } finally {
       setSubmitting(false);
     }
@@ -81,13 +85,20 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
   const handleDelete = async () => {
     if (!notice) return;
-    if (!confirm(`'${notice.title}' 공지를 삭제하시겠습니까?`)) return;
+    if (!confirm('삭제할까요?')) return;
 
     try {
+      setDeleting(true);
+      setErrorMsg(null);
+      // Clean up Storage files if attached
+      await deleteAttachedStorageFiles(notice);
+      // Delete document
       await deleteDoc(doc(db, 'notices', notice.id));
       navigate('/notices');
     } catch (err) {
-      alert('삭제 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : String(err)));
+      console.error('Delete notice failed:', err);
+      setErrorMsg(formatKoreanError(err));
+      setDeleting(false);
     }
   };
 
@@ -115,7 +126,7 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
 
   return (
     <article className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-      {/* Top back navigation */}
+      {/* Top back navigation & Owner controls */}
       <div className="flex items-center justify-between border-b border-[rgba(11,31,75,0.1)] pb-4 mb-8">
         <button
           onClick={() => navigate('/notices')}
@@ -129,19 +140,34 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
           <div className="flex items-center gap-2">
             <button
               onClick={openEditModal}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-[#0B1F4B] text-white text-xs hover:bg-[#1D3FBB] transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1 bg-[#0B1F4B] text-white text-xs hover:bg-[#1D3FBB] transition-colors shadow-xs"
             >
               <Edit2 className="w-3 h-3" /> 수정
             </button>
             <button
               onClick={handleDelete}
-              className="inline-flex items-center gap-1 px-3 py-1 text-red-600 border border-red-200 hover:bg-red-50 text-xs transition-colors"
+              disabled={deleting}
+              className="inline-flex items-center gap-1 px-3 py-1 text-red-600 border border-red-200 hover:bg-red-50 text-xs transition-colors disabled:opacity-50"
             >
-              <Trash2 className="w-3 h-3" /> 삭제
+              <Trash2 className="w-3 h-3" /> {deleting ? '삭제 중...' : '삭제'}
             </button>
           </div>
         )}
       </div>
+
+      {/* Error alert banner */}
+      {errorMsg && (
+        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2 rounded-xs">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 leading-relaxed">{errorMsg}</div>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="text-red-500 hover:text-red-700 font-bold ml-2 text-sm"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Notice Content Paper Sheet */}
       <div className="paper-sheet p-6 sm:p-10 relative paper-fold-line shadow-sm mb-8">
@@ -160,6 +186,16 @@ export const NoticeDetailPage: React.FC<NoticeDetailPageProps> = ({ noticeId }) 
           {notice.content}
         </div>
       </div>
+
+      {/* Footer Back Button */}
+      <footer className="mt-12 pt-6 border-t border-[rgba(11,31,75,0.12)] flex justify-center">
+        <button
+          onClick={() => navigate('/notices')}
+          className="inline-flex items-center gap-1.5 px-6 py-2.5 border border-[rgba(11,31,75,0.2)] hover:border-[#1D3FBB] text-xs font-medium tracking-wide text-[#0B1F4B] hover:text-[#1D3FBB] transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> 공지사항 목록으로 돌아가기
+        </button>
+      </footer>
 
       {/* Edit Modal */}
       <Modal

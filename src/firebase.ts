@@ -12,7 +12,39 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const OWNER_WHITELIST_EMAIL = 'choehyejeong219@gmail.com';
+export const OWNER_EMAILS = [
+  'choehyejeong219@gmail.com',
+  'jennyjelly607@gmail.com',
+];
+
+export const OWNER_WHITELIST_EMAIL = OWNER_EMAILS[0];
+
+export function checkIsOwner(email?: string | null): boolean {
+  if (!email) return false;
+  return OWNER_EMAILS.some((ownerEmail) => ownerEmail.toLowerCase() === email.toLowerCase());
+}
+
+export function formatKoreanError(err: unknown): string {
+  if (!err) return '오류가 발생했습니다.';
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes('permission-denied') ||
+    msg.includes('Missing or insufficient permissions') ||
+    msg.includes('unauthorized') ||
+    msg.includes('권한')
+  ) {
+    return '삭제 또는 수정 권한이 없습니다. 관리자(주인) 계정으로 로그인되어 있는지 확인해주세요.';
+  }
+  if (
+    msg.includes('unavailable') ||
+    msg.includes('offline') ||
+    msg.includes('network') ||
+    msg.includes('Failed to fetch')
+  ) {
+    return '네트워크 연결이 끊겼거나 원활하지 않습니다. 인터넷 연결 상태를 확인 후 다시 시도해주세요.';
+  }
+  return `처리 중 오류가 발생했습니다: ${msg}`;
+}
 
 export enum OperationType {
   CREATE = 'create',

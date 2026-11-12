@@ -11,63 +11,65 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isWhitelistedOwner() {
-      return isSignedIn() && (
-        (request.auth.token.email == 'choehyejeong219@gmail.com' && request.auth.token.email_verified == true) ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128;
+    function isOwner() {
+      return isSignedIn()
+        && (
+          request.auth.token.email == 'choehyejeong219@gmail.com' ||
+          request.auth.token.email == 'jennyjelly607@gmail.com'
+        )
+        && request.auth.token.email_verified == true;
     }
 
     // Home Slider Cards
     match /homeCards/{cardId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(cardId);
+      allow write: if isOwner();
     }
 
     // Hero Section Cards
     match /heroCards/{cardId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(cardId);
+      allow write: if isOwner();
     }
 
     // Notices
     match /notices/{noticeId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(noticeId);
+      allow write: if isOwner();
     }
 
     // Talks (구상&잡담)
     match /talks/{talkId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(talkId);
+      allow write: if isOwner();
+    }
+    match /talk/{talkId} {
+      allow read: if true;
+      allow write: if isOwner();
     }
 
     // Videos
     match /videos/{videoId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(videoId);
+      allow write: if isOwner();
     }
 
     // Songs
     match /songs/{songId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(songId);
+      allow write: if isOwner();
     }
 
     // Characters
     match /characters/{characterId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(characterId);
+      allow write: if isOwner();
     }
 
-    // Stories
+    // Behind Stories
     match /stories/{storyId} {
       allow read: if true;
-      allow create, update, delete: if isWhitelistedOwner() && isValidId(storyId);
+      allow write: if isOwner();
     }
 
     // Anonymous Questions
@@ -75,14 +77,13 @@ service cloud.firestore {
     // 쓰기: 새 질문 생성만 누구나 가능 (50자 이내, 답변 필드는 비어 있어야 함)
     // 질문의 답변 작성/수정/삭제는 주인만
     match /questions/{questionId} {
-      allow read: if isWhitelistedOwner() || (resource != null && resource.data.answered == true);
-      allow create: if isValidId(questionId) &&
-        request.resource.data.question is string &&
+      allow read: if isOwner() || (resource != null && resource.data.answered == true);
+      allow create: if request.resource.data.question is string &&
         request.resource.data.question.size() > 0 &&
         request.resource.data.question.size() <= 50 &&
         request.resource.data.answered == false &&
         (!('answer' in request.resource.data) || request.resource.data.answer == null || request.resource.data.answer == '');
-      allow update, delete: if isWhitelistedOwner() && isValidId(questionId);
+      allow update, delete: if isOwner();
     }
 
     // Connection test document
@@ -93,7 +94,7 @@ service cloud.firestore {
     // Admins
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if isWhitelistedOwner() && isValidId(adminId);
+      allow write: if isOwner();
     }
   }
 }

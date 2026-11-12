@@ -59,6 +59,9 @@ export interface SongItem {
   id: string;
   title: string;
   audioUrl: string;
+  coverUrl?: string;
+  audioPath?: string;
+  coverPath?: string;
   lyrics: string;
   relatedCharacterIds?: string[];
   order: number;

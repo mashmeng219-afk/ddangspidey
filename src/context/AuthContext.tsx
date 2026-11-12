@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { auth, googleProvider, OWNER_WHITELIST_EMAIL } from '../firebase';
+import { auth, googleProvider, checkIsOwner } from '../firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser && currentUser.email) {
-        if (currentUser.email.toLowerCase() !== OWNER_WHITELIST_EMAIL.toLowerCase()) {
+        if (!checkIsOwner(currentUser.email)) {
           // 허용 목록에 없는 계정으로 로그인하면 즉시 로그아웃 처리하고 안내
           try {
             await signOut(auth);
@@ -49,9 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const isOwner = Boolean(
-    user && user.email && user.email.toLowerCase() === OWNER_WHITELIST_EMAIL.toLowerCase()
-  );
+  const isOwner = Boolean(user && user.email && checkIsOwner(user.email));
 
   const clearAuthError = () => setAuthError(null);
 
@@ -59,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setAuthError(null);
       const res = await signInWithPopup(auth, googleProvider);
-      if (res.user && res.user.email?.toLowerCase() !== OWNER_WHITELIST_EMAIL.toLowerCase()) {
+      if (res.user && !checkIsOwner(res.user.email)) {
         try {
           await signOut(auth);
         } catch {
